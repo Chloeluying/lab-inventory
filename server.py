@@ -221,7 +221,12 @@ def add_return():
 
     old_remaining = existing['当前余量']
     total = existing['入库管数']
-    new_remaining = min(old_remaining + count, total)
+    taken = total - old_remaining  # 实际已被取走的管数
+    if count > taken:
+        conn.close()
+        return jsonify({"error": f"归还数不能超过已被取走的数量！该样本共被取走 {taken} 管，已归还 {old_remaining - (total - taken)} 管，最多还能还 {taken} 管"}), 400
+
+    new_remaining = old_remaining + count
 
     operator = data.get('操作人', '').strip()
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')

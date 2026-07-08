@@ -502,12 +502,20 @@ function showReturnInfo() {
   if (!sid) { info.style.display = 'none'; return; }
   const sample = allSamples.find(s => s.样品分子号 === sid);
   if (sample) {
+    const total = sample.入库管数 || 0;
+    const remaining = sample.当前余量 || 0;
+    const taken = total - remaining;  // 已取走数=最大可还数
     info.style.display = 'block';
     info.innerHTML = `
       <div class="row"><span class="label">患者</span><span>${sample.患者姓名 || '?'}</span></div>
-      <div class="row"><span class="label">入库管数</span><span>${sample.入库管数 || 0} 管</span></div>
-      <div class="row"><span class="label">当前余量</span><span>${sample.当前余量 || 0} 管</span></div>
+      <div class="row"><span class="label">入库管数</span><span>${total} 管</span></div>
+      <div class="row"><span class="label">当前余量</span><span>${remaining} 管</span></div>
+      <div class="row"><span class="label">最大可还</span><span><strong>${taken}</strong> 管</span></div>
     `;
+    document.getElementById('return-count').max = taken;
+    // 如果当前填的数超过最大可还，自动修正
+    const input = document.getElementById('return-count');
+    if (parseInt(input.value) > taken) input.value = taken;
   }
 }
 
