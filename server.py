@@ -320,7 +320,38 @@ def export_excel():
     conn = get_db()
     rows = conn.execute('SELECT * FROM samples ORDER BY id').fetchall()
     conn.close()
+    return build_excel_response(rows, f"实验室样本库存_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx")
 
+
+@app.route('/api/export/excel/filtered')
+def export_filtered_excel():
+    keyword = request.args.get('keyword', '').strip()
+    fridge = request.args.get('fridge', '').strip()
+
+    conn = get_db()
+    if keyword and fridge:
+        rows = conn.execute(
+            'SELECT * FROM samples WHERE (患者姓名 LIKE ? OR 样品分子号 LIKE ? OR 诊断 LIKE ?) AND 冰箱编号=? ORDER BY id',
+            (f'%{keyword}%', f'%{keyword}%', f'%{keyword}%', fridge)
+        ).fetchall()
+    elif keyword:
+        rows = conn.execute(
+            'SELECT * FROM samples WHERE 患者姓名 LIKE ? OR 样品分子号 LIKE ? OR 诊断 LIKE ? ORDER BY id',
+            (f'%{keyword}%', f'%{keyword}%', f'%{keyword}%')
+        ).fetchall()
+    elif fridge:
+        rows = conn.execute(
+            'SELECT * FROM samples WHERE 冰箱编号=? ORDER BY id',
+            (fridge,)
+        ).fetchall()
+    else:
+        rows = conn.execute('SELECT * FROM samples ORDER BY id').fetchall()
+    conn.close()
+
+    return build_excel_response(rows, f"实验室样本库存_筛选_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx")
+
+
+def build_excel_response(rows, filename):
     wb = Workbook()
     ws = wb.active
     ws.title = "样本库存"
@@ -364,7 +395,7 @@ def export_excel():
         output,
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         as_attachment=True,
-        download_name=f"实验室样本库存_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        download_name=filename
     )
 
 

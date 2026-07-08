@@ -122,7 +122,7 @@
   <button onclick="switchForm('out')">📤 取用登记</button>
   <button onclick="switchForm('return')">📤 归还登记</button>
   <button onclick="switchForm('view')">📋 数据查看</button>
-  <button class="btn-export" onclick="exportExcel()">📊 导出Excel</button>
+  <button class="btn-export" onclick="exportAllExcel()">📊 导出全部</button>
 </div>
 
 <div class="container">
@@ -306,7 +306,7 @@
       <button class="btn-submit" onclick="refreshView()">🔄 刷新数据</button>
     </div>
     <div class="form-group">
-      <button class="btn-submit" style="background:#27ae60" onclick="exportExcel()">📊 导出Excel报表</button>
+      <button class="btn-submit" style="background:#27ae60" onclick="exportFilteredExcel()">📊 导出筛选结果</button>
     </div>
   </div>
 </div>
@@ -752,11 +752,48 @@ async function confirmDeleteSample(sampleId) {
   }
 }
 
-// ===== 导出Excel =====
-function exportExcel() {
+// ===== 导出全部 =====
+function exportAllExcel() {
   const a = document.createElement('a');
   a.href = API_BASE + '/api/export/excel';
-  a.download = '实验室样本库存.xlsx';
+  a.download = '实验室样本库存_全部.xlsx';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+// ===== 导出筛选结果（调用后端筛选导出API） =====
+async function exportFilteredExcel() {
+  const keyword = document.getElementById('search-keyword').value.trim();
+  const fridge = document.getElementById('filter-fridge').value;
+
+  const samples = window._allSamples || [];
+  let filtered = samples;
+  if (keyword) {
+    const kw = keyword.toLowerCase();
+    filtered = filtered.filter(s =>
+      (s.患者姓名 || '').toLowerCase().includes(kw) ||
+      (s.样品分子号 || '').toLowerCase().includes(kw) ||
+      (s.诊断 || '').toLowerCase().includes(kw)
+    );
+  }
+  if (fridge) {
+    filtered = filtered.filter(s => s.冰箱编号 === fridge);
+  }
+
+  if (filtered.length === 0) {
+    alert('当前筛选条件下没有数据可导出');
+    return;
+  }
+
+  // 用后端API导出（传筛选条件）
+  const params = new URLSearchParams();
+  if (keyword) params.set('keyword', keyword);
+  if (fridge) params.set('fridge', fridge);
+
+  const a = document.createElement('a');
+  a.href = API_BASE + '/api/export/excel/filtered?' + params.toString();
+  a.download = '实验室样本库存_筛选结果.xlsx';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
