@@ -614,14 +614,20 @@ function updateViewTable(samples) {
   html += '</tr></thead><tbody>';
 
   samples.forEach(s => {
+    const outRecs = s.取用记录 || [];
+    const retRecs = s.归还记录 || [];
     const remaining = s.当前余量 || 0;
     const total = s.入库管数 || 0;
     const status = remaining <= 0 ? '已取完' : remaining < total ? '部分取走' : '有样本';
     const badgeClass = status === '有样本' ? 'badge-green' : status === '部分取走' ? 'badge-yellow' : 'badge-red';
+    const hasDetail = outRecs.length > 0 || retRecs.length > 0;
+    const sid = s.样品分子号 || '';
+    const safeId = sid.replace(/[^a-zA-Z0-9_-]/g, '_');
 
-    html += '<tr style="border-bottom:1px solid #eee;">';
+    html += '<tr style="border-bottom:1px solid #eee;" id="row-' + safeId + '">';
+    html += `<td style="padding:6px 8px;">${hasDetail ? '<span class="toggle-row-btn" onclick="toggleDetail(\'' + safeId + '\')">▶</span>' : ''}</td>`;
     html += `<td style="padding:6px 8px;">${s.患者姓名 || '?'}</td>`;
-    html += `<td style="padding:6px 8px;">${s.样品分子号 || '?'}</td>`;
+    html += `<td style="padding:6px 8px;">${sid}</td>`;
     html += `<td style="padding:6px 8px;">${s.样本种类 || ''}</td>`;
     html += `<td style="padding:6px 8px;">${s.冰箱编号 || ''}</td>`;
     const layer = s.冰箱层 || '';
@@ -629,7 +635,33 @@ function updateViewTable(samples) {
     html += `<td style="padding:6px 8px;">${total}</td>`;
     html += `<td style="padding:6px 8px; font-weight:bold;">${remaining}</td>`;
     html += `<td style="padding:6px 8px;"><span class="badge ${badgeClass}">${status}</span></td>`;
+    html += `<td style="padding:6px 8px; text-align:center;"><span class="del-btn" onclick="confirmDeleteSample('${sid}')" title="删除整条样本" style="cursor:pointer; color:#e74c3c; font-weight:bold; font-size:16px;">🗑</span></td>`;
     html += '</tr>';
+
+    if (hasDetail) {
+      html += '<tr id="detail-' + safeId + '" class="detail-row" style="display:none; border-bottom:1px solid #e0e0e0;">';
+      html += '<td colspan="10" style="padding:8px 8px 8px 20px;">';
+
+      if (outRecs.length > 0) {
+        html += '<div style="margin-bottom:6px;"><strong style="color:#e67e22;">📤 取用记录</strong></div>';
+        html += '<div class="detail-cell">';
+        outRecs.forEach((r, i) => {
+          html += `<span class="detail-item">${r.count}管 · ${r.person || '?'}${r.date ? ' · ' + r.date : ''}<span class="del-btn" onclick="confirmDeleteRecord('${sid}','${r.id}')" title="删除此条">✕</span></span>`;
+        });
+        html += '</div>';
+      }
+
+      if (retRecs.length > 0) {
+        html += '<div style="margin:6px 0 6px 0;"><strong style="color:#27ae60;">📥 归还记录</strong></div>';
+        html += '<div class="detail-cell">';
+        retRecs.forEach((r, i) => {
+          html += `<span class="detail-item">${r.count}管 · ${r.person || '?'}${r.date ? ' · ' + r.date : ''}<span class="del-btn" onclick="confirmDeleteRecord('${sid}','${r.id}')" title="删除此条">✕</span></span>`;
+        });
+        html += '</div>';
+      }
+
+      html += '</td></tr>';
+    }
   });
 
   html += '</tbody></table>';
@@ -665,6 +697,50 @@ async function refreshView() {
     updateViewTable(samples);
   } catch(e) {
     document.getElementById('view-loading').textContent = '❌ 加载失败：' + e.message;
+  }
+}
+
+// ===== 展开/折叠 =====
+function toggleDetail(safeId) {
+  const row = document.getElementById('detail-' + safeId);
+  const btn = document.querySelector('#row-' + safeId + ' .toggle-row-btn');
+  if (!row) return;
+  if (row.style.display === 'none') {
+    row.style.display = '';
+    if (btn) btn.textContent = '▼';
+  } else {
+    row.style.display = 'none';
+    if (btn) btn.textContent = '▶';
+  }
+}
+
+// ===== 删除单条操作记录 =====
+async function confirmDeleteRecord(sampleId, recordId) {
+  if (!confirm(`确定要删除这条记录吗？系统会自动重算样本余量和状态。`)) return;
+  try {
+    const result = await apiPost('/api/delete/record', {record_id: parseInt(recordId)});
+    if (result.error) {
+      alert('❌ ' + result.error);
+    } else {
+      refreshView();
+    }
+  } catch(e) {
+    alert('❌ 网络错误：' + e.message);
+  }
+}
+
+// ===== 删除整条样本 =====
+async function confirmDeleteSample(sampleId) {
+  if (!confirm(`确定要删除样品「${sampleId}」的所有数据吗？不可恢复！`)) return;
+  try {
+    const result = await apiPost('/api/delete/sample', {样品分子号: sampleId});
+    if (result.error) {
+      alert('❌ ' + result.error);
+    } else {
+      refreshView();
+    }
+  } catch(e) {
+    alert('❌ 网络错误：' + e.message);
   }
 }
 

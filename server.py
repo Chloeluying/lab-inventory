@@ -75,17 +75,17 @@ def sample_from_row(row):
     # 取关联的操作记录
     conn = get_db()
     outs = conn.execute(
-        'SELECT 操作数量,操作人,操作日期 FROM operations WHERE 样品分子号=? AND 操作类型="取用" ORDER BY id',
+        'SELECT id,操作数量,操作人,操作日期 FROM operations WHERE 样品分子号=? AND 操作类型="取用" ORDER BY id',
         (d['样品分子号'],)
     ).fetchall()
     rets = conn.execute(
-        'SELECT 操作数量,操作人,操作日期 FROM operations WHERE 样品分子号=? AND 操作类型="归还" ORDER BY id',
+        'SELECT id,操作数量,操作人,操作日期 FROM operations WHERE 样品分子号=? AND 操作类型="归还" ORDER BY id',
         (d['样品分子号'],)
     ).fetchall()
     conn.close()
 
-    d['取用记录'] = [{'count': r['操作数量'], 'person': r['操作人'], 'date': r['操作日期']} for r in outs]
-    d['归还记录'] = [{'count': r['操作数量'], 'person': r['操作人'], 'date': r['操作日期']} for r in rets]
+    d['取用记录'] = [{'id': r['id'], 'count': r['操作数量'], 'person': r['操作人'], 'date': r['操作日期']} for r in outs]
+    d['归还记录'] = [{'id': r['id'], 'count': r['操作数量'], 'person': r['操作人'], 'date': r['操作日期']} for r in rets]
     # 保证旧前端兼容
     d['冰箱层（从上往下）'] = d['冰箱层']
     return d
