@@ -179,6 +179,17 @@
       <label>补充说明</label>
       <textarea id="in-note" placeholder="可选填写"></textarea>
     </div>
+    <div class="form-group">
+      <label>登记人 <span class="required">*</span></label>
+      <select id="in-person">
+        <option value="">— 请选择 —</option>
+        <option>卢莹</option><option>曾森</option><option>黎中政</option>
+        <option>杨梦婷</option><option>苏卓琳</option><option>王清萍</option>
+        <option>刘玥</option><option>彭瑶</option><option>杨程灏</option>
+        <option>韩纪宏</option><option>吕紫茵</option><option>陈佳鑫</option>
+        <option>郭泉池</option>
+      </select>
+    </div>
     <button class="btn-submit" onclick="submitIn()">提交入库</button>
     <div id="msg-in" class="message"></div>
   </div>
@@ -209,8 +220,15 @@
       <input type="text" id="out-purpose" placeholder="如：提RNA / 做实验">
     </div>
     <div class="form-group">
-      <label>取用人</label>
-      <input type="text" id="out-person" placeholder="谁取的">
+      <label>取用人 <span class="required">*</span></label>
+      <select id="out-person">
+        <option value="">— 请选择 —</option>
+        <option>卢莹</option><option>曾森</option><option>黎中政</option>
+        <option>杨梦婷</option><option>苏卓琳</option><option>王清萍</option>
+        <option>刘玥</option><option>彭瑶</option><option>杨程灏</option>
+        <option>韩纪宏</option><option>吕紫茵</option><option>陈佳鑫</option>
+        <option>郭泉池</option>
+      </select>
     </div>
     <button class="btn-submit" onclick="submitOut()">提交取用</button>
     <div id="msg-out" class="message"></div>
@@ -238,8 +256,15 @@
       </div>
     </div>
     <div class="form-group">
-      <label>归还人</label>
-      <input type="text" id="return-person" placeholder="谁还的">
+      <label>归还人 <span class="required">*</span></label>
+      <select id="return-person">
+        <option value="">— 请选择 —</option>
+        <option>卢莹</option><option>曾森</option><option>黎中政</option>
+        <option>杨梦婷</option><option>苏卓琳</option><option>王清萍</option>
+        <option>刘玥</option><option>彭瑶</option><option>杨程灏</option>
+        <option>韩纪宏</option><option>吕紫茵</option><option>陈佳鑫</option>
+        <option>郭泉池</option>
+      </select>
     </div>
     <button class="btn-submit" onclick="submitReturn()">提交归还</button>
     <div id="msg-return" class="message"></div>
