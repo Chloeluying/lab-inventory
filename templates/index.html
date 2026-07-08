@@ -188,7 +188,8 @@
     <h2>📤 取用登记</h2>
     <div class="form-group">
       <label>选择样本 <span class="required">*</span></label>
-      <select id="out-sample" onchange="showOutInfo()">
+      <input type="text" id="out-sample-search" placeholder="输入患者名或样品号搜索..." oninput="filterOutSamples()" style="margin-bottom:6px">
+      <select id="out-sample" onchange="showOutInfo()" size="5" style="height:auto">
         <option value="">— 请选择有库存的样本 —</option>
       </select>
       <div id="out-info" class="sample-info"></div>
@@ -217,12 +218,13 @@
 
   <!-- ===== 归还表单 ===== -->
   <div id="form-return" class="form-card">
-    <h2>📤 归还登记</h2>
-    <div class="form-group">
-      <label>选择样本 <span class="required">*</span></label>
-      <select id="return-sample" onchange="showReturnInfo()">
-        <option value="">— 请选择样本 —</option>
-      </select>
+  <h2>📤 归还登记</h2>
+  <div class="form-group">
+  <label>选择样本 <span class="required">*</span></label>
+  <input type="text" id="return-sample-search" placeholder="输入患者名或样品号搜索..." oninput="filterReturnSamples()" style="margin-bottom:6px">
+  <select id="return-sample" onchange="showReturnInfo()" size="5" style="height:auto">
+  <option value="">— 请选择样本 —</option>
+  </select>
       <div id="return-info" class="sample-info"></div>
     </div>
     <div class="form-row">
@@ -404,9 +406,29 @@ async function loadAvailableSamples() {
       opt.textContent = `${s.患者姓名} | ${s.样品分子号} | ${status}`;
       returnSelect.appendChild(opt);
     });
+    document.getElementById('out-sample-search').value = '';
+    document.getElementById('return-sample-search').value = '';
   } catch(e) {
     select.innerHTML = '<option value="">⚠️ 加载失败，请刷新</option>';
     console.error(e);
+  }
+}
+
+function filterOutSamples() {
+  const keyword = document.getElementById('out-sample-search').value.trim().toLowerCase();
+  const select = document.getElementById('out-sample');
+  for (let i = 0; i < select.options.length; i++) {
+    const text = select.options[i].textContent.toLowerCase();
+    select.options[i].style.display = (!keyword || text.includes(keyword)) ? '' : 'none';
+  }
+}
+
+function filterReturnSamples() {
+  const keyword = document.getElementById('return-sample-search').value.trim().toLowerCase();
+  const select = document.getElementById('return-sample');
+  for (let i = 0; i < select.options.length; i++) {
+    const text = select.options[i].textContent.toLowerCase();
+    select.options[i].style.display = (!keyword || text.includes(keyword)) ? '' : 'none';
   }
 }
 
