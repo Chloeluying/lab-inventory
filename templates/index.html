@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>实验室样本出入库管理系统</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Microsoft YaHei", sans-serif;
+    background: #f0f4f8; color: #2c3e50; min-height: 100vh;
+  }
+  .header {
+    background: linear-gradient(135deg, #1B3A5C, #2C5F8A);
+    color: white; padding: 20px 30px; text-align: center;
+  }
+  .header h1 { font-size: 24px; margin-bottom: 4px; }
+  .header p { font-size: 14px; opacity: 0.8; }
+  .nav {
+    display: flex; justify-content: center; gap: 10px;
+    padding: 15px; background: white; border-bottom: 1px solid #e0e0e0;
+    flex-wrap: wrap;
+  }
+  .nav button {
+    padding: 10px 24px; border: 2px solid #1B3A5C; border-radius: 8px;
+    background: white; color: #1B3A5C; font-size: 15px; cursor: pointer;
+    font-weight: bold; transition: all 0.2s;
+  }
+  .nav button.active { background: #1B3A5C; color: white; }
+  .nav button:hover { opacity: 0.85; }
+  .btn-export {
+    background: #27ae60; border-color: #27ae60; color: white;
+  }
+  .btn-export:hover { background: #219a52; }
+  .container { max-width: 700px; margin: 20px auto; padding: 0 15px; }
+  .form-card {
+    background: white; border-radius: 12px; padding: 25px 30px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08); display: none;
+  }
+  .form-card.active { display: block; }
+  .form-card h2 {
+    font-size: 20px; margin-bottom: 20px; padding-bottom: 12px;
+    border-bottom: 2px solid #f0f0f0;
+  }
+  .form-group { margin-bottom: 16px; }
+  .form-group label {
+    display: block; font-size: 14px; font-weight: bold;
+    margin-bottom: 5px; color: #555;
+  }
+  .form-group label .required { color: #e74c3c; }
+  .form-group input, .form-group select, .form-group textarea {
+    width: 100%; padding: 10px 14px; border: 1.5px solid #d0d7de;
+    border-radius: 8px; font-size: 15px; transition: border-color 0.2s;
+    background: #fafbfc;
+  }
+  .form-group input:focus, .form-group select:focus {
+    outline: none; border-color: #4A90D9; box-shadow: 0 0 0 3px rgba(74,144,217,0.15);
+  }
+  .form-group textarea { resize: vertical; min-height: 60px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .btn-submit {
+    width: 100%; padding: 14px; background: #1B3A5C; color: white;
+    border: none; border-radius: 8px; font-size: 17px; font-weight: bold;
+    cursor: pointer; transition: background 0.2s; margin-top: 8px;
+  }
+  .btn-submit:hover { background: #2C5F8A; }
+  .btn-submit:disabled { background: #95a5a6; cursor: not-allowed; }
+  .message {
+    margin-top: 12px; padding: 12px; border-radius: 8px;
+    font-size: 14px; display: none;
+  }
+  .message.success { display: block; background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+  .message.error { display: block; background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+  .message.info { display: block; background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+  .loading {
+    text-align: center; padding: 40px; color: #7f8c8d; font-size: 16px;
+  }
+  .sample-info {
+    background: #f0f7ff; border: 1px solid #cce5ff; border-radius: 8px;
+    padding: 12px 16px; margin-top: 8px; font-size: 13px; display: none;
+  }
+  .sample-info .row { display: flex; justify-content: space-between; padding: 4px 0; }
+  .sample-info .label { color: #666; }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 10px;
+    font-size: 12px; font-weight: bold;
+  }
+  .badge-green { background: #d4edda; color: #155724; }
+  .badge-yellow { background: #fff3cd; color: #856404; }
+  .badge-red { background: #f8d7da; color: #721c24; }
+  @media (max-width: 500px) {
+    .form-row, .form-row-3 { grid-template-columns: 1fr; }
+    .form-card { padding: 18px; }
+    .nav button { padding: 8px 16px; font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>🧪 实验室样本出入库管理</h1>
+  <p>湘雅三医院 · 张如旭教授课题组</p>
+</div>
+
+<div class="nav">
+  <button class="active" onclick="switchForm('in')">📥 入库登记</button>
+  <button onclick="switchForm('out')">📤 取用登记</button>
+  <button onclick="switchForm('return')">📤 归还登记</button>
+  <button onclick="switchForm('view')">📋 数据查看</button>
+  <button class="btn-export" onclick="exportExcel()">📊 导出Excel</button>
+</div>
+
+<div class="container">
+  <!-- ===== 入库表单 ===== -->
+  <div id="form-in" class="form-card active">
+    <h2>📥 入库登记</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label>样本种类 <span class="required">*</span></label>
+        <select id="in-type"><option>血清血浆</option><option>DNA</option><option>皮肤</option><option>RBC</option></select>
+      </div>
+      <div class="form-group">
+        <label>操作日期</label>
+        <input type="date" id="in-date">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>患者姓名 <span class="required">*</span></label>
+        <input type="text" id="in-name" placeholder="如：张三">
+      </div>
+      <div class="form-group">
+        <label>患者性别 <span class="required">*</span></label>
+        <select id="in-gender"><option>男</option><option>女</option></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>患者年龄 <span class="required">*</span></label>
+        <input type="number" id="in-age" placeholder="如：45">
+      </div>
+      <div class="form-group">
+        <label>诊断 <span class="required">*</span></label>
+        <input type="text" id="in-diagnosis" placeholder="如：CMT1A">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>样品分子号 <span class="required">*</span></label>
+      <input type="text" id="in-sample-id" placeholder="如：CMT-2026-001">
+    </div>
+    <div class="form-row-3">
+      <div class="form-group">
+        <label>冰箱编号 <span class="required">*</span></label>
+        <select id="in-fridge">
+          <option>医技楼-80</option><option>医技楼-20（临时）</option>
+          <option>雄海花园</option><option>附一-80</option><option>江湾楼</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>冰箱层 <span class="required">*</span></label>
+        <input type="text" id="in-layer" placeholder="如：3" style="text-align:center">
+      </div>
+      <div class="form-group">
+        <label>入库管数 <span class="required">*</span></label>
+        <input type="number" id="in-count" value="1" min="1" style="text-align:center">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>收纳盒编号 <span class="required">*</span></label>
+        <input type="text" id="in-box" placeholder="如：A01">
+      </div>
+      <div class="form-group">
+        <label>格子序号 <span class="required">*</span></label>
+        <input type="text" id="in-cell" placeholder="如：01">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>补充说明</label>
+      <textarea id="in-note" placeholder="可选填写"></textarea>
+    </div>
+    <button class="btn-submit" onclick="submitIn()">提交入库</button>
+    <div id="msg-in" class="message"></div>
+  </div>
+
+  <!-- ===== 取用表单 ===== -->
+  <div id="form-out" class="form-card">
+    <h2>📤 取用登记</h2>
+    <div class="form-group">
+      <label>选择样本 <span class="required">*</span></label>
+      <select id="out-sample" onchange="showOutInfo()">
+        <option value="">— 请选择有库存的样本 —</option>
+      </select>
+      <div id="out-info" class="sample-info"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>取用管数 <span class="required">*</span></label>
+        <input type="number" id="out-count" value="1" min="1" style="text-align:center">
+      </div>
+      <div class="form-group">
+        <label>操作日期</label>
+        <input type="date" id="out-date">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>取用用途</label>
+      <input type="text" id="out-purpose" placeholder="如：提RNA / 做实验">
+    </div>
+    <div class="form-group">
+      <label>取用人</label>
+      <input type="text" id="out-person" placeholder="谁取的">
+    </div>
+    <button class="btn-submit" onclick="submitOut()">提交取用</button>
+    <div id="msg-out" class="message"></div>
+  </div>
+
+  <!-- ===== 归还表单 ===== -->
+  <div id="form-return" class="form-card">
+    <h2>📤 归还登记</h2>
+    <div class="form-group">
+      <label>选择样本 <span class="required">*</span></label>
+      <select id="return-sample" onchange="showReturnInfo()">
+        <option value="">— 请选择样本 —</option>
+      </select>
+      <div id="return-info" class="sample-info"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>归还管数 <span class="required">*</span></label>
+        <input type="number" id="return-count" value="1" min="1" style="text-align:center">
+      </div>
+      <div class="form-group">
+        <label>操作日期</label>
+        <input type="date" id="return-date">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>归还人</label>
+      <input type="text" id="return-person" placeholder="谁还的">
+    </div>
+    <button class="btn-submit" onclick="submitReturn()">提交归还</button>
+    <div id="msg-return" class="message"></div>
+  </div>
+
+  <!-- ===== 数据查看 ===== -->
+  <div id="form-view" class="form-card">
+    <h2>📋 数据查看与搜索</h2>
+    <div class="form-group">
+      <label>搜索（患者名 / 样品分子号）</label>
+      <input type="text" id="search-keyword" placeholder="输入关键词" oninput="filterView()">
+    </div>
+    <div class="form-group">
+      <label>筛选冰箱</label>
+      <select id="filter-fridge" onchange="filterView()">
+        <option value="">全部冰箱</option>
+        <option>医技楼-80</option><option>医技楼-20（临时）</option>
+        <option>雄海花园</option><option>附一-80</option><option>江湾楼</option>
+      </select>
+    </div>
+    <div id="view-loading" class="loading">⏳ 加载数据中...</div>
+    <div id="view-table-wrap" style="overflow-x:auto; display:none;"></div>
+    <div class="form-group" style="margin-top:12px">
+      <button class="btn-submit" onclick="refreshView()">🔄 刷新数据</button>
+    </div>
+    <div class="form-group">
+      <button class="btn-submit" style="background:#27ae60" onclick="exportExcel()">📊 导出Excel报表</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== API配置 =====
+// 使用相对路径，部署后自动适应当前域名
+const API_BASE = '';
+
+// ===== 状态 =====
+let allSamples = [];
+
+// ===== 切换表单 =====
+function switchForm(name) {
+  document.querySelectorAll('.form-card').forEach(f => f.classList.remove('active'));
+  document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('form-' + name).classList.add('active');
+  if (name === 'out' || name === 'return') loadAvailableSamples();
+  if (name === 'view') refreshView();
+  const btns = document.querySelectorAll('.nav button');
+  const idx = {in:0, out:1, return:2, view:3}[name];
+  if (btns[idx]) btns[idx].classList.add('active');
+}
+
+// ===== 初始化 =====
+document.addEventListener('DOMContentLoaded', () => {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('in-date').value = today;
+  document.getElementById('out-date').value = today;
+  document.getElementById('return-date').value = today;
+  refreshView();
+});
+
+// ===== 显示消息 =====
+function showMsg(id, text, type) {
+  const el = document.getElementById(id);
+  el.className = 'message ' + type;
+  el.textContent = text;
+}
+
+// ===== API调用 =====
+async function apiPost(path, data) {
+  const resp = await fetch(API_BASE + path, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data)
+  });
+  return resp.json();
+}
+
+async function apiGet(path) {
+  const resp = await fetch(API_BASE + path);
+  return resp.json();
+}
+
+// ===== 入库 =====
+function submitIn() {
+  const name = document.getElementById('in-name').value.trim();
+  const sampleId = document.getElementById('in-sample-id').value.trim();
+  const box = document.getElementById('in-box').value.trim();
+  const cell = document.getElementById('in-cell').value.trim();
+
+  if (!name || !sampleId || !box || !cell) {
+    showMsg('msg-in', '请填写所有必填项（患者姓名、样品分子号、收纳盒编号、格子序号）', 'error');
+    return;
+  }
+
+  const btn = document.querySelector('#form-in .btn-submit');
+  btn.disabled = true;
+  btn.textContent = '⏳ 提交中...';
+
+  const data = {
+    样品分子号: sampleId,
+    患者姓名: name,
+    患者性别: document.getElementById('in-gender').value,
+    患者年龄: parseInt(document.getElementById('in-age').value) || 0,
+    诊断: document.getElementById('in-diagnosis').value.trim(),
+    样本种类: document.getElementById('in-type').value,
+    冰箱编号: document.getElementById('in-fridge').value,
+    冰箱层: document.getElementById('in-layer').value.trim(),
+    收纳盒编号: box,
+    格子序号: cell,
+    入库管数: parseInt(document.getElementById('in-count').value) || 1,
+    操作日期: document.getElementById('in-date').value,
+    补充说明: document.getElementById('in-note').value.trim()
+  };
+
+  apiPost('/api/inbound', data).then(result => {
+    btn.disabled = false;
+    btn.textContent = '提交入库';
+    if (result.error) {
+      showMsg('msg-in', '❌ ' + result.error, 'error');
+    } else {
+      showMsg('msg-in', '✅ 入库成功！', 'success');
+      // 清空部分字段
+      document.getElementById('in-name').value = '';
+      document.getElementById('in-age').value = '';
+      document.getElementById('in-diagnosis').value = '';
+      document.getElementById('in-sample-id').value = '';
+      document.getElementById('in-box').value = '';
+      document.getElementById('in-cell').value = '';
+      document.getElementById('in-count').value = '1';
+      document.getElementById('in-note').value = '';
+    }
+    refreshView();
+  }).catch(e => {
+    btn.disabled = false;
+    btn.textContent = '提交入库';
+    showMsg('msg-in', '❌ 网络错误：' + e.message, 'error');
+  });
+}
+
+// ===== 加载可选样本 =====
+async function loadAvailableSamples() {
+  const select = document.getElementById('out-sample');
+  const returnSelect = document.getElementById('return-sample');
+
+  try {
+    const result = await apiGet('/api/samples');
+    allSamples = result.samples || [];
+
+    const available = allSamples.filter(s => (s.当前余量 || 0) > 0);
+    select.innerHTML = '<option value="">— 请选择有库存的样本 —</option>';
+    available.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.样品分子号;
+      opt.textContent = `${s.患者姓名} | ${s.样品分子号} | ${s.样本种类 || ''} | 余${s.当前余量}管`;
+      select.appendChild(opt);
+    });
+
+    returnSelect.innerHTML = '<option value="">— 请选择样本 —</option>';
+    allSamples.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.样品分子号;
+      const remaining = s.当前余量 || 0;
+      const status = remaining <= 0 ? '已取完' : `余${remaining}管`;
+      opt.textContent = `${s.患者姓名} | ${s.样品分子号} | ${status}`;
+      returnSelect.appendChild(opt);
+    });
+  } catch(e) {
+    select.innerHTML = '<option value="">⚠️ 加载失败，请刷新</option>';
+    console.error(e);
+  }
+}
+
+// ===== 显示取用信息 =====
+function showOutInfo() {
+  const sid = document.getElementById('out-sample').value;
+  const info = document.getElementById('out-info');
+  if (!sid) { info.style.display = 'none'; return; }
+  const sample = allSamples.find(s => s.样品分子号 === sid);
+  if (sample) {
+    info.style.display = 'block';
+    info.innerHTML = `
+      <div class="row"><span class="label">患者</span><span>${sample.患者姓名 || '?'}</span></div>
+      <div class="row"><span class="label">诊断</span><span>${sample.诊断 || '?'}</span></div>
+      <div class="row"><span class="label">样本</span><span>${sample.样本种类 || '?'}</span></div>
+      <div class="row"><span class="label">位置</span><span>${sample.冰箱编号 || ''} ${sample.冰箱层 || ''}层 ${sample.收纳盒编号 || ''}-${sample.格子序号 || ''}</span></div>
+      <div class="row"><span class="label">当前余量</span><span><strong>${sample.当前余量 || 0}</strong> 管</span></div>
+    `;
+    document.getElementById('out-count').max = sample.当前余量 || 0;
+  }
+}
+
+function showReturnInfo() {
+  const sid = document.getElementById('return-sample').value;
+  const info = document.getElementById('return-info');
+  if (!sid) { info.style.display = 'none'; return; }
+  const sample = allSamples.find(s => s.样品分子号 === sid);
+  if (sample) {
+    info.style.display = 'block';
+    info.innerHTML = `
+      <div class="row"><span class="label">患者</span><span>${sample.患者姓名 || '?'}</span></div>
+      <div class="row"><span class="label">入库管数</span><span>${sample.入库管数 || 0} 管</span></div>
+      <div class="row"><span class="label">当前余量</span><span>${sample.当前余量 || 0} 管</span></div>
+    `;
+  }
+}
+
+// ===== 取用 =====
+function submitOut() {
+  const sid = document.getElementById('out-sample').value;
+  const count = parseInt(document.getElementById('out-count').value) || 1;
+  if (!sid) { showMsg('msg-out', '请选择要取用的样本', 'error'); return; }
+
+  const sample = allSamples.find(s => s.样品分子号 === sid);
+  if (!sample) { showMsg('msg-out', '未找到该样本信息', 'error'); return; }
+  if (count > (sample.当前余量 || 0)) {
+    showMsg('msg-out', `库存不足！当前余量 ${sample.当前余量} 管`, 'error');
+    return;
+  }
+
+  const btn = document.querySelector('#form-out .btn-submit');
+  btn.disabled = true;
+  btn.textContent = '⏳ 提交中...';
+
+  const data = {
+    样品分子号: sid,
+    操作数量: count,
+    操作日期: document.getElementById('out-date').value,
+    用途: document.getElementById('out-purpose').value.trim(),
+    操作人: document.getElementById('out-person').value.trim()
+  };
+
+  apiPost('/api/outbound', data).then(result => {
+    btn.disabled = false;
+    btn.textContent = '提交取用';
+    if (result.error) {
+      showMsg('msg-out', '❌ ' + result.error, 'error');
+    } else {
+      showMsg('msg-out', `✅ 取用成功！取走 ${count} 管`, 'success');
+    }
+    loadAvailableSamples();
+    refreshView();
+  }).catch(e => {
+    btn.disabled = false;
+    btn.textContent = '提交取用';
+    showMsg('msg-out', '❌ 网络错误：' + e.message, 'error');
+  });
+}
+
+// ===== 归还 =====
+function submitReturn() {
+  const sid = document.getElementById('return-sample').value;
+  const count = parseInt(document.getElementById('return-count').value) || 1;
+  if (!sid) { showMsg('msg-return', '请选择要归还的样本', 'error'); return; }
+
+  const btn = document.querySelector('#form-return .btn-submit');
+  btn.disabled = true;
+  btn.textContent = '⏳ 提交中...';
+
+  const data = {
+    样品分子号: sid,
+    操作数量: count,
+    操作日期: document.getElementById('return-date').value,
+    操作人: document.getElementById('return-person').value.trim()
+  };
+
+  apiPost('/api/return', data).then(result => {
+    btn.disabled = false;
+    btn.textContent = '提交归还';
+    if (result.error) {
+      showMsg('msg-return', '❌ ' + result.error, 'error');
+    } else {
+      showMsg('msg-return', `✅ 归还成功！归还 ${count} 管`, 'success');
+    }
+    loadAvailableSamples();
+    refreshView();
+  }).catch(e => {
+    btn.disabled = false;
+    btn.textContent = '提交归还';
+    showMsg('msg-return', '❌ 网络错误：' + e.message, 'error');
+  });
+}
+
+// ===== 数据查看 =====
+async function fetchSamples() {
+  const result = await apiGet('/api/samples');
+  return result.samples || [];
+}
+
+function updateViewTable(samples) {
+  const wrap = document.getElementById('view-table-wrap');
+  const loading = document.getElementById('view-loading');
+
+  if (!samples || samples.length === 0) {
+    loading.style.display = 'block';
+    loading.textContent = '暂无数据。请先入库一些样本。';
+    wrap.style.display = 'none';
+    return;
+  }
+
+  loading.style.display = 'none';
+  wrap.style.display = 'block';
+
+  let html = '<table style="width:100%; border-collapse:collapse; font-size:13px;">';
+  html += '<thead><tr style="background:#1B3A5C; color:white;">';
+  const headers = ['患者', '样品号', '样本', '冰箱', '位置', '入库', '余量', '状态'];
+  headers.forEach(h => html += `<th style="padding:8px; text-align:left; white-space:nowrap;">${h}</th>`);
+  html += '</tr></thead><tbody>';
+
+  samples.forEach(s => {
+    const remaining = s.当前余量 || 0;
+    const total = s.入库管数 || 0;
+    const status = remaining <= 0 ? '已取完' : remaining < total ? '部分取走' : '有样本';
+    const badgeClass = status === '有样本' ? 'badge-green' : status === '部分取走' ? 'badge-yellow' : 'badge-red';
+
+    html += '<tr style="border-bottom:1px solid #eee;">';
+    html += `<td style="padding:6px 8px;">${s.患者姓名 || '?'}</td>`;
+    html += `<td style="padding:6px 8px;">${s.样品分子号 || '?'}</td>`;
+    html += `<td style="padding:6px 8px;">${s.样本种类 || ''}</td>`;
+    html += `<td style="padding:6px 8px;">${s.冰箱编号 || ''}</td>`;
+    const layer = s.冰箱层 || '';
+    html += `<td style="padding:6px 8px;">${layer}F ${s.收纳盒编号 || ''}-${s.格子序号 || ''}</td>`;
+    html += `<td style="padding:6px 8px;">${total}</td>`;
+    html += `<td style="padding:6px 8px; font-weight:bold;">${remaining}</td>`;
+    html += `<td style="padding:6px 8px;"><span class="badge ${badgeClass}">${status}</span></td>`;
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+function filterView() {
+  const keyword = document.getElementById('search-keyword').value.trim().toLowerCase();
+  const fridge = document.getElementById('filter-fridge').value;
+  let samples = window._allSamples || [];
+
+  if (keyword) {
+    samples = samples.filter(s =>
+      (s.患者姓名 || '').toLowerCase().includes(keyword) ||
+      (s.样品分子号 || '').toLowerCase().includes(keyword) ||
+      (s.诊断 || '').toLowerCase().includes(keyword)
+    );
+  }
+  if (fridge) {
+    samples = samples.filter(s => s.冰箱编号 === fridge);
+  }
+  updateViewTable(samples);
+}
+
+async function refreshView() {
+  document.getElementById('view-loading').style.display = 'block';
+  document.getElementById('view-loading').textContent = '⏳ 加载数据中...';
+  document.getElementById('view-table-wrap').style.display = 'none';
+
+  try {
+    const samples = await fetchSamples();
+    window._allSamples = samples;
+    updateViewTable(samples);
+  } catch(e) {
+    document.getElementById('view-loading').textContent = '❌ 加载失败：' + e.message;
+  }
+}
+
+// ===== 导出Excel =====
+function exportExcel() {
+  const a = document.createElement('a');
+  a.href = API_BASE + '/api/export/excel';
+  a.download = '实验室样本库存.xlsx';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+</script>
+</body>
+</html>

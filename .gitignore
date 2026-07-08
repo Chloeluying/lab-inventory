@@ -1,0 +1,5 @@
+# 数据库文件（自动生成）
+data/
+# Python缓存
+__pycache__/
+*.pyc
