@@ -89,6 +89,21 @@
   .badge-green { background: #d4edda; color: #155724; }
   .badge-yellow { background: #fff3cd; color: #856404; }
   .badge-red { background: #f8d7da; color: #721c24; }
+  .detail-row { background: #f8fafc; }
+  .detail-row td { padding: 4px 8px 4px 20px !important; font-size: 12px; }
+  .detail-cell { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .detail-item {
+    background: #fff; border: 1px solid #e0e0e0; border-radius: 6px;
+    padding: 3px 10px; font-size: 12px; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .detail-item .del-btn {
+    cursor: pointer; color: #e74c3c; font-weight: bold; font-size: 14px;
+    padding: 0 2px; line-height: 1;
+  }
+  .detail-item .del-btn:hover { color: #c0392b; }
+  .expand-btn { cursor: pointer; color: #4A90D9; font-size: 12px; user-select: none; }
+  .expand-btn:hover { text-decoration: underline; }
+  .toggle-row-btn { cursor: pointer; color: #4A90D9; font-size: 16px; user-select: none; padding: 0 4px; }
   @media (max-width: 500px) {
     .form-row, .form-row-3 { grid-template-columns: 1fr; }
     .form-card { padding: 18px; }
@@ -376,6 +391,7 @@ function submitIn() {
     格子序号: cell,
     入库管数: parseInt(document.getElementById('in-count').value) || 1,
     操作日期: document.getElementById('in-date').value,
+    登记人: document.getElementById('in-person').value.trim(),
     补充说明: document.getElementById('in-note').value.trim()
   };
 
@@ -423,12 +439,16 @@ async function loadAvailableSamples() {
     });
 
     returnSelect.innerHTML = '<option value="">— 请选择样本 —</option>';
-    allSamples.forEach(s => {
+    // 归还下拉：只显示已被取过的样本（部分取走或全部取走）
+    const returnable = allSamples.filter(s => {
+      const status = s.库位状态 || '';
+      return status === '部分取走' || status === '全部取走';
+    });
+    returnable.forEach(s => {
       const opt = document.createElement('option');
       opt.value = s.样品分子号;
       const remaining = s.当前余量 || 0;
-      const status = remaining <= 0 ? '已取完' : `余${remaining}管`;
-      opt.textContent = `${s.患者姓名} | ${s.样品分子号} | ${status}`;
+      opt.textContent = `${s.患者姓名} | ${s.样品分子号} | ${s.库位状态 || ''} | 余${remaining}管`;
       returnSelect.appendChild(opt);
     });
     document.getElementById('out-sample-search').value = '';
@@ -589,7 +609,7 @@ function updateViewTable(samples) {
 
   let html = '<table style="width:100%; border-collapse:collapse; font-size:13px;">';
   html += '<thead><tr style="background:#1B3A5C; color:white;">';
-  const headers = ['患者', '样品号', '样本', '冰箱', '位置', '入库', '余量', '状态'];
+  const headers = ['', '患者', '样品号', '样本', '冰箱', '位置', '入库', '余量', '状态', ''];
   headers.forEach(h => html += `<th style="padding:8px; text-align:left; white-space:nowrap;">${h}</th>`);
   html += '</tr></thead><tbody>';
 
